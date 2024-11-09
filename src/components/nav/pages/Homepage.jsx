@@ -1,11 +1,13 @@
 import React, { useRef, useState, useEffect } from 'react';
+import { Button, Card } from 'react-bootstrap';
 
 
-export default function LLM_Front() {
+export default function LLM_Front(props) {
   const [isRecording, setIsRecording] = useState(false);
   const mediaRecorderRef = useRef(null);
   const recordedChunks = useRef([]);
   const videoStreamRef = useRef(null);
+  const videoPreviewRef = useRef(null);
   
   const llmAPIurl = 'http://localhost:5000';
   
@@ -13,11 +15,16 @@ export default function LLM_Front() {
     const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
 
     videoStreamRef.current = stream;
+    if (videoPreviewRef.current) {
+      videoPreviewRef.current.srcObject = stream;
+    }
+
     const MediaRecorder = new MediaRecorder(stream, {
       mimeType: 'video/webm; codecs=vp9',
     });
 
     mediaRecorderRef.current = MediaRecorder;
+    recordedChunks.current = []; // reset the recorded chunks array
 
     // Push data chunks when data is available during recording
     mediaRecorder.ondataavailable = (event) => {
@@ -67,7 +74,53 @@ export default function LLM_Front() {
     }
   }
   
+  useEffect(() => {
+    const startWebcamPreview = async () => {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: false, // Only video for the preview
+      });
 
-  return <div>
+      videoStreamRef.current = stream;
+      if (videoPreviewRef.current) {
+        videoPreviewRef.current.srcObject = stream;
+      }
+    };
+
+    startWebcamPreview();
+
+    // Cleanup on unmount
+    return () => {
+      if (videoStreamRef.current) {
+        videoStreamRef.current.getTracks().forEach((track) => track.stop());
+      }
+    };
+  }, []);
+
+  return (
+  <div className="container">
+    <h1 className="my-4">Webcam and Microphone Recorder</h1>
+
+    <Card style={{ width: '100%', maxWidth: '640px', margin: 'auto' }}>
+      <Card.Body>
+        <Card.Title>Webcam Preview</Card.Title>
+        <Card.Img
+          as="video"
+          ref={videoPreviewRef}
+          autoPlay
+          muted
+          style={{ width: '100%' }}
+        />
+      </Card.Body>
+    </Card>
+
+    <div className="my-4">
+      {!isRecording ? (
+        <Button variant="primary" onClick={startRecording}>Start Recording</Button>
+      ) : (
+        <Button variant="danger" onClick={stopRecording}>Stop Recording</Button>
+      )}
+    </div>
   </div>
+  )
 }
