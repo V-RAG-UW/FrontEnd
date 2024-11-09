@@ -16,6 +16,7 @@ module.exports = {
     "no-undef": "off",
     "mixed-spaces-and-tabs": "off",
     "react/prop-types": "off",
+    "react/no-unescaped-entities": "off",
     'react-refresh/only-export-components': [
       'warn',
       { allowConstantExport: true },
