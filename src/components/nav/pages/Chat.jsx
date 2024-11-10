@@ -2,17 +2,20 @@ import React, { useRef, useState, useEffect } from 'react';
 import { Button, Card, Container, Col, Row } from 'react-bootstrap';
 
 export default function LLMFront() {
-  const isDebugMode = true; // Set to true if running in dev mode
+  const isDebugMode = false; // Set to true if running in dev mode
   const [isRecording, setIsRecording] = useState(false);
   const mediaRecorderRef = useRef(null);
   const recordedChunks = useRef([]);
   const videoStreamRef = useRef(null);
   const videoPreviewRef = useRef(null);
   
-  const llmAPIurl = import.meta.env.VITE_LLM_API_URL;
+  const llmRecognitionAPIurl = import.meta.env.VITE_LLM_RECOGNITION_API_URL;
+  const llmChatAPIurl = import.meta.env.VITE_LLM_CHAT_API_URL;
+
   // LLM Text Response stuff
   const [responseText, setResponseText] = useState('');
   const [displayedText, setDisplayedText] = useState('');
+  const [textDisplayed, setTextDisplayed] = useState(false);
 
   // TTS stuff
   const elevenLabsAPIKey = import.meta.env.VITE_XI_LABS_API_KEY;
@@ -26,9 +29,7 @@ export default function LLMFront() {
   
     
   useEffect(() => {
-    // Clear the response text when the component is loaded or reloaded
-    setResponseText(null);
-
+    if (textDisplayed) setResponseText(null); 
     // Start the webcam when the component is loaded
     const startWebcam = async () => {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
@@ -70,6 +71,7 @@ export default function LLMFront() {
     // Start the recording
     mediaRecorder.start();
     setIsRecording(true);
+    setTextDisplayed(false);
   };
 
   const stopRecording = () => {
@@ -106,15 +108,15 @@ export default function LLMFront() {
     formData.append('video', blob, 'sussybaka.webm');
 
     try {
-      const response = await fetch(`${llmAPIurl}/process_video`, {
+      const response = await fetch(`${llmRecognitionAPIurl}/process_video`, {
         method: 'POST',
         body: formData,
       })
 
       if (response.ok) {
         // Handle response stream from LLM
-        handleResponseStream(response.body);
-        ///tempHandleResponseStream(response.body);
+        // handleResponseStream(response.body);
+        tempHandleResponseStream(response.body);
       } else {
         console.error(`Failed to upload recording: ${response.statusText}`);
       }
@@ -123,26 +125,69 @@ export default function LLMFront() {
     }
   };
 
+  function parseMultipleJson(jsonChunk) {
+    // Regular expression to match JSON objects
+    const jsonObjects = jsonChunk.match(/(\{.*?\})(?=\{|\s*$)/g);
+    
+    if (!jsonObjects) {
+      throw new Error('Invalid JSON input');
+    }
+  
+    // Parse each JSON object
+    return jsonObjects.map(obj => JSON.parse(obj));
+  }
+
   // handle response stream from intermediary server
   const tempHandleResponseStream = async (responseBody) => {
     const reader = responseBody.getReader();
     const decoder = new TextDecoder('utf-8');
-
+  
     let result;
     let accumulatedText = ''; // To accumulate the full response
+    let bufferedText = ''; // Buffer to hold incomplete JSON chunks
     setResponseText(null); // Clear previous response text
+  
     while (!(result = await reader.read()).done) {
       const chunk = decoder.decode(result.value, { stream: true });
-
+      bufferedText += chunk; // Append the new chunk to the buffer
+  
       try {
-        const parsedChunk = JSON.parse(chunk);
-        const description = parsedChunk.description;
+        // Regex to match and extract individual JSON objects
+        const jsonObjects = bufferedText.match(/(\{.*?\})(?=\{|\s*$)/g);
+  
+        if (jsonObjects) {
+          jsonObjects.forEach((jsonObj) => {
+            try {
+              const parsedChunk = JSON.parse(jsonObj);
+              const description = parsedChunk.description;
+              if (description && description.length > 0) {
+                accumulatedText += description; // Append description to the full response
+                console.log('LLM response:', description);
+              }
+            } catch (error) {
+              console.error('Error parsing JSON object:', error);
+            }
+          });
+  
+          // Remove the processed JSON objects from the buffer
+          bufferedText = bufferedText.replace(/(\{.*?\})(?=\{|\s*$)/g, '');
+        }
+      } catch (error) {
+        console.error('Error parsing JSON stream chunk:', error);
+      }
+    }
+  
+    // Handle any remaining buffered text in case it's a partial JSON object
+    if (bufferedText.trim() !== '') {
+      try {
+        const remainingJson = JSON.parse(bufferedText);
+        const description = remainingJson.description;
         if (description && description.length > 0) {
-          accumulatedText += description; // Append description to the full response
+          accumulatedText += description;
           console.log('LLM response:', description);
         }
       } catch (error) {
-        console.error('Error parsing JSON stream chunk', error);
+        console.error('Error parsing remaining JSON:', error);
       }
     }
 
@@ -193,6 +238,15 @@ export default function LLMFront() {
     setResponseText(accumulatedText);
   };
 
+  const resetChatHistory = () => {
+    fetch(`${llmChatAPIurl}/reset`, {
+      method: 'POST',
+    })
+
+    // clear the response text
+    setResponseText(null);
+  }
+
   useEffect(() => {
     drawInitialCanvas();
     if (responseText) {
@@ -236,6 +290,7 @@ export default function LLMFront() {
         const typingInterval = audio.duration / text.length;
         typeText(typingInterval, text);
         visualizeAudio(audio);
+        setTextDisplayed(true);
       });
 
       if (isDebugMode) {
@@ -384,7 +439,7 @@ export default function LLMFront() {
       <Card style={{ width: '100%', margin: 'auto', height: '100%' }}>
         <Card.Body style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '100%' }}>
           <div>
-            <Card.Title>LLM Response</Card.Title>
+            <Card.Title>Virtual Agent</Card.Title>
           </div>
           <div style={{ flexGrow: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', marginTop: '105px' }}>
             <canvas ref={canvasRef} style={{ width: '420px', height: '200px', maxWidth: '100%', maxHeight: '100%' }} />
@@ -420,6 +475,7 @@ export default function LLMFront() {
       ) : (
         <Button variant="danger" onClick={stopRecording}>Stop Conversation</Button>
       )}
+      <Button style={{ marginLeft: '10px' }} variant="primary" onClick={resetChatHistory}>Reset Chat History</Button>
       
       {isDebugMode && (
         <>

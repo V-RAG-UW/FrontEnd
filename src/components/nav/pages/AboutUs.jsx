@@ -2,8 +2,10 @@ import React from 'react';
 import { Container, Row, Col, Card } from 'react-bootstrap';
 
 // profile images
-import haruto from '../../../assets/haruto.png';
+import haruto from '../../../assets/ugly_ass.jpg';
 import kuroma from '../../../assets/look_at_this_guy.jpg';
+import lee from '../../../assets/pepelaff.png';
+import andy from '../../../assets/yeeyee.png'
 
 const AboutUs = () => {
   const teamMembers = [
@@ -15,25 +17,25 @@ const AboutUs = () => {
       homepage: 'https://harutohiroki.com',
     },
     {
-      name: 'Wen Jie Lee',
-      role: 'Back-End Developer',
-      description: 'Lorem ipsum',
-      image: 'https://via.placeholder.com/150',
-      homepage: '',
-    },
-    {
       name: 'KK (Kuroma) Thuwajit',
-      role: 'AI Engineer',
+      role: 'AI Engineer (Chat Completion)',
       description: 'KK leads the development of our AI completion agent powered by GPT and LLaMA models, expertly crafted to deliver smooth, coherent, and engaging conversations with our service.',
       image: kuroma,
       homepage: 'https://kuroma.dev/',
     },
     {
-      name: 'Yeedrag',
-      role: 'Back-End Developer',
+      name: 'Andy (Yeedrag) Wang',
+      role: 'AI Engineer (Recognition Engine)',
+      description: 'Andy contributed to developing real-time video summarization by creating video descriptions and audio transcriptions using LLaVA and Whisper. This work was essential for processing and generating insights from video content efficiently.',
+      image: andy,
+      homepage: 'https://yeedrag.github.io',
+    },
+    {
+      name: 'Wen Jie Lee',
+      role: 'VideoRAG Database Engineer',
       description: 'Lorem ipsum',
-      image: 'https://via.placeholder.com/150',
-      homepage: '',
+      image: lee,
+      homepage: 'https://www.wenjielee.tech/about',
     },
   ];
 
@@ -44,7 +46,7 @@ const AboutUs = () => {
         {teamMembers.map((member, index) => (
           <Col key={index} md={6} lg={3} className="mb-4">
             <Card className="text-center">
-              <Card.Img variant="top" src={member.image} alt={member.name} />
+              <Card.Img variant="top" src={member.image} alt={member.name} style={{}} />
               <Card.Body>
                 <Card.Title>{member.name}</Card.Title>
                 <Card.Subtitle className="mb-2 text-muted">{member.role}</Card.Subtitle>
