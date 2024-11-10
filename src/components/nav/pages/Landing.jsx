@@ -27,7 +27,7 @@ const LandingPage = (props) => {
               <Card.Body>
                 <Card.Title>Introduction</Card.Title>
                 <Card.Text>
-                  This project explores enhancing retrieval-augmented generation (RAG) systems by integrating video data to provide more authentic and contextually rich responses. Traditional text-based retrieval systems often miss crucial non-verbal cues such as facial expressions, emotions, injuries, or clothing, which are vital in contexts like childcare or education. Video data helps address these gaps.
+                  This project explores enhancing retrieval-augmented generation (RAG) systems by integrating video data to provide more authentic and contextually rich responses. Traditional text-based retrieval systems often miss crucial non-verbal cues such as facial expressions, emotions, injuries, or clothing, which are vital in contexts like childcare or education. Video data helps address these gaps. While image recognition software could supplement text logs, it risks omitting subtle but potentially important details. Since video-to-text parsing is irreversible, important visual context can be lost.
                 </Card.Text>
               </Card.Body>
             </Card>

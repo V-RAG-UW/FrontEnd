@@ -2,7 +2,7 @@ import React, { useRef, useState, useEffect } from 'react';
 import { Button, Card, Container, Col, Row } from 'react-bootstrap';
 
 export default function LLMFront() {
-  const isDebugMode = false; // Set to true if running in dev mode
+  const isDevMode = true; // Set to true if running in dev mode
   const [isRecording, setIsRecording] = useState(false);
   const mediaRecorderRef = useRef(null);
   const recordedChunks = useRef([]);
@@ -16,7 +16,6 @@ export default function LLMFront() {
   // TTS stuff
   const elevenLabsAPIKey = "sk_0498c804c30683cedaf5fd1f6c1e63de649af08e5b2ee6dc";
   const elevenLabsVoiceID = "cgSgspJ2msm6clMCkdW9";
-  const elevenLabsURL = `https://api.elevenlabs.io/v1/text-to-speech/${elevenLabsVoiceID}/stream`;
   const audioContextRef = useRef(null);
   const analyserRef = useRef(null);
   const canvasRef = useRef(null);
@@ -58,9 +57,6 @@ export default function LLMFront() {
       }
     };
 
-    // clear the previous response
-    setResponseText(null);
-
     // Start the recording
     mediaRecorder.start();
     setIsRecording(true);
@@ -76,7 +72,7 @@ export default function LLMFront() {
         type: 'video/mp4; codecs=avc1.42E01E, mp4a.40.2',
       });
   
-      if (isDebugMode) {
+      if (isDevMode) {
         // Create a URL for the blob
         const videoURL = URL.createObjectURL(blob);
         
@@ -124,7 +120,6 @@ export default function LLMFront() {
     let result;
     let accumulatedText = ''; // To accumulate the full response
     setDisplayedText(''); // Clear previous displayed text
-    setResponseText(null); // Clear previous response text
     while (!(result = await reader.read()).done) {
       const chunk = decoder.decode(result.value, { stream: true });
 
@@ -143,9 +138,8 @@ export default function LLMFront() {
           try {
             const parsedLine = JSON.parse(line);
             const delta = parsedLine.choices[0].delta.content;
-            if (delta && delta.length > 0) {
+            if (delta) {
               accumulatedText += delta; // Append delta to the full response
-              console.log('LLM response:', delta);
             }
           } catch (error) {
             console.error('Error parsing JSON stream chunk', error);
@@ -163,101 +157,79 @@ export default function LLMFront() {
     if (responseText) {
       console.log('Received response:', responseText);
       ElevenLabsTTS(responseText);
-    } else {
-      setDisplayedText('Awaiting response...');
     }
   }, [responseText]);
 
   const ElevenLabsTTS = async (text) => {
-    // Fetch audio stream from ElevenLabs API
-    const options =
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "xi-api-key": elevenLabsAPIKey,
-      },
-      body: JSON.stringify({
-        text: text,
-        model_id: "eleven_turbo_v2_5",
-        voice_settings: {
-          similarity_boost: 0.8,
-          stability: 0.3
-        },
-      }),
-    }
-
     try {
-      const response = await fetch(elevenLabsURL, options);
-      const audiofile = await response.blob();
-      
-      // play the audio file
-      const audioUrl = URL.createObjectURL(audiofile);
-      const audio = new Audio(audioUrl);
-      audio.play();
+      const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${elevenLabsVoiceID}/stream`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'xi-api-key': elevenLabsAPIKey,
+        },
+        body: JSON.stringify({text: text}),
+      });
+  
+      if (!response.ok) {
+        throw new Error('Error generating speech');
+      }
+  
+      const mediaSource = new MediaSource();
+        const audio = new Audio();
+        audio.src = URL.createObjectURL(mediaSource);
 
-      audio.addEventListener('loadedmetadata', () => {
-        // Typing effect by taking duration of the audio file divided by the number of characters
-        const typingInterval = audio.duration / text.length;
-        typeText(typingInterval, text);
+      mediaSource.addEventListener('sourceopen', () => {
+        const sourceBuffer = mediaSource.addSourceBuffer('audio/webm; codecs=opus');
+
+        // Stream the audio chunks as they come in
+        const reader = response.body.getReader();
+
+        let index = 0;
+        let accumulatedText = '';  // To accumulate the displayed text
+
+        const readChunk = async () => {
+          const { done, value } = await reader.read();
+          if (done) {
+            mediaSource.endOfStream();  // Mark the stream as finished
+            return;
+          }
+
+          // Append the audio chunk to the sourceBuffer
+          sourceBuffer.appendBuffer(value);
+
+          // Sync the typing effect with the audio duration of the chunk
+          const chunkDuration = value.byteLength / (sourceBuffer.timestampOffset * text.split('').length);
+          accumulatedText += text.split('')[index];
+          setDisplayedText(accumulatedText);
+          index++;
+
+          setTimeout(() => {
+            readChunk();  // Read the next chunk after typing the current chunk
+          }, chunkDuration * 1000);  // Set typing speed based on chunk duration
+        };
+
+        readChunk();  // Start reading chunks
       });
 
-      if (isDebugMode) {
-        // save the audio file
-        const a = document.createElement('a');
-        a.href = audioUrl;
-        a.download = 'llm_response.wav';
-        a.click();
-      }
-
+      audio.play();  // Play the audio
+      typeText();  // Start typing the text
     } catch (error) {
-      console.error("Error generating speech with ElevenLabs:", error);
+      console.error('Error generating speech with ElevenLabs:', error);
     }
   };
-
-  const typeText = (typingInterval, text) => {
+  
+  const typeText = () => {
+  
     let index = 0;
-    setDisplayedText(''); // Clear previous displayed text
     const interval = setInterval(() => {
-      setDisplayedText((prev) => prev + text.split('')[index-1]);
+      setDisplayedText((prev) => prev + responseText.split('')[index]);
       index++;
-      if (index >= text.length) {
+      if (index >= responseText.length) {
         clearInterval(interval);
       }
-    }, typingInterval * 500); // Typing interval is based on speech duration
+    }, 250); // Typing interval is based on speech duration
   };
-
-  // Function to simulate receiving a stream of data from the LLM
-  const simulateLLMStream = () => {
-    const simulatedChunks = [
-      { delta: "This is the first chunk. " },
-      { delta: "And this is the second chunk. " },
-      { delta: "Finally, we have the third chunk of data." }
-    ];
-
-    const simulatedStream = new ReadableStream({
-      start(controller) {
-        simulatedChunks.forEach((chunk, index) => {
-          setTimeout(() => {
-            const jsonChunk = JSON.stringify({ choices: [{ delta: { content: chunk.delta } }] });
-            const chunkData = `data: ${jsonChunk}\n\n`;
-            controller.enqueue(new TextEncoder().encode(chunkData)); // Send the data in chunks
-
-            if (index === simulatedChunks.length - 1) {
-              setTimeout(() => {
-                controller.enqueue(new TextEncoder().encode('data: [DONE]\n\n')); // End of the stream
-                controller.close(); // Close the stream after sending all chunks
-              }, 1000);
-            }
-          }, index * 1000); // Simulate a delay between chunks (1 second per chunk)
-        });
-      }
-    });
-
-    // Pass the entire stream to the handleResponseStream function
-    handleResponseStream(simulatedStream);
-  };
-
 
   return (
   <Container className="text-center my-5">
@@ -295,15 +267,42 @@ export default function LLMFront() {
       ) : (
         <Button variant="danger" onClick={stopRecording}>Stop Conversation</Button>
       )}
-      
-      {isDebugMode && (
-        <>
-          <Button style={{ marginLeft: '10px' }} variant="primary" onClick={() => {setResponseText('This is a longer string of words')}}>Test Button</Button>
-          <Button style={{ marginLeft: '10px' }} variant="primary" onClick={() => {setResponseText(null)}}>Clear Button</Button>
-          <Button style={{ marginLeft: '10px' }} variant="primary" onClick={simulateLLMStream}>Simulate Stream</Button>
-        </>
-      )}
+      <Button style={{ marginLeft: '10px' }} variant="primary" onClick={() => setResponseText('Hello World')}>Test Button</Button>
     </div>
   </Container>
   )
 }
+
+const visualizeAudio = (audio) => {
+  const analyser = analyserRef.current;
+  const canvas = canvasRef.current;
+  const ctx = canvas.getContext('2d');
+  const bufferLength = analyser.frequencyBinCount;
+  const dataArray = new Uint8Array(bufferLength);
+
+  const draw = () => {
+    analyser.getByteFrequencyData(dataArray);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.beginPath();
+
+    const radius = 100;
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+
+    for (let i = 0; i < bufferLength; i++) {
+      const value = dataArray[i];
+      const angle = (i / bufferLength) * Math.PI * 2;
+      const x = centerX + Math.cos(angle) * radius;
+      const y = centerY + Math.sin(angle) * radius;
+      const r = Math.max(50, value);
+
+      ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.stroke();
+
+    requestAnimationFrame(draw);
+  };
+
+  draw();
+};
