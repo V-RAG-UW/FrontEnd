@@ -2,6 +2,8 @@ import React from 'react';
 import { Container, Row, Col, Card, Button } from 'react-bootstrap';
 import 'bootstrap/dist/css/bootstrap.min.css';
 
+import grace from '../../../assets/grace.png';
+
 const LandingPage = (props) => {
   return (
     <div>
@@ -57,6 +59,20 @@ const LandingPage = (props) => {
                   <li><strong>Response Generation:</strong> The LLM generates contextually accurate responses.</li>
                   <li><strong>Logging:</strong> The metadata is logged for future use and the process repeats.</li>
                 </ul>
+              </Card.Body>
+            </Card>
+          </Col>
+        </Row>
+      </Container>
+
+      <Container className="my-5">
+        <Row>
+          <Col md={12}>
+            <Card className="border-0 shadow-lg">
+              <Card.Body>
+                <Card.Text>
+                  <img src={grace} alt="Proposed Pipeline" className="img-fluid" />
+                </Card.Text>
               </Card.Body>
             </Card>
           </Col>
