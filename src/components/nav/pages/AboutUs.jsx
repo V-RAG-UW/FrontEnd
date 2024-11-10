@@ -1,13 +1,17 @@
 import React from 'react';
 import { Container, Row, Col, Card } from 'react-bootstrap';
 
+// profile images
+import haruto from '../../../assets/haruto.png';
+import kuroma from '../../../assets/look_at_this_guy.jpg';
+
 const AboutUs = () => {
   const teamMembers = [
     {
       name: 'Phong (HarutoHiroki) Do',
       role: 'Front-End Developer',
       description: 'Phong is responsible for the design and functionality of our website, ensuring that it is user-friendly and visually appealing.',
-      image: 'https://via.placeholder.com/150',
+      image: haruto,
       homepage: 'https://harutohiroki.com',
     },
     {
@@ -18,11 +22,11 @@ const AboutUs = () => {
       homepage: '',
     },
     {
-      name: 'KK',
-      role: 'Back-End Developer',
-      description: 'Lorem ipsum',
-      image: 'https://via.placeholder.com/150',
-      homepage: '',
+      name: 'KK (Kuroma) Thuwajit',
+      role: 'AI Engineer',
+      description: 'KK leads the development of our AI completion agent powered by GPT and LLaMA models, expertly crafted to deliver smooth, coherent, and engaging conversations with our service.',
+      image: kuroma,
+      homepage: 'https://kuroma.dev/',
     },
     {
       name: 'Yeedrag',

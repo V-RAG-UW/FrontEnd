@@ -9,15 +9,14 @@ export default function LLMFront() {
   const videoStreamRef = useRef(null);
   const videoPreviewRef = useRef(null);
   
-  const llmAPIurl = 'https://518e-143-235-40-244.ngrok-free.app';
-
+  const llmAPIurl = import.meta.env.VITE_LLM_API_URL;
   // LLM Text Response stuff
   const [responseText, setResponseText] = useState('');
   const [displayedText, setDisplayedText] = useState('');
 
   // TTS stuff
-  const elevenLabsAPIKey = "sk_0498c804c30683cedaf5fd1f6c1e63de649af08e5b2ee6dc";
-  const elevenLabsVoiceID = "cgSgspJ2msm6clMCkdW9";
+  const elevenLabsAPIKey = import.meta.env.VITE_XI_LABS_API_KEY;
+  const elevenLabsVoiceID = import.meta.env.VITE_XI_LABS_VOICE_ID
   const elevenLabsURL = `https://api.elevenlabs.io/v1/text-to-speech/${elevenLabsVoiceID}/stream`;
 
   // Audio Visualization stuff
@@ -27,6 +26,10 @@ export default function LLMFront() {
   
     
   useEffect(() => {
+    // Clear the response text when the component is loaded or reloaded
+    setResponseText(null);
+
+    // Start the webcam when the component is loaded
     const startWebcam = async () => {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
 
@@ -111,7 +114,7 @@ export default function LLMFront() {
       if (response.ok) {
         // Handle response stream from LLM
         handleResponseStream(response.body);
-        // tempHandleResponseStream(response.body);
+        ///tempHandleResponseStream(response.body);
       } else {
         console.error(`Failed to upload recording: ${response.statusText}`);
       }
@@ -284,7 +287,7 @@ export default function LLMFront() {
       analyser.getByteFrequencyData(dataArray);
       canvasContext.clearRect(0, 0, canvas.width, canvas.height);
   
-      const radius = canvas.height / 3;
+      const radius = canvas.height / 2.5;
       const centerX = canvas.width / 2;
       const centerY = canvas.height / 2;
       const barWidth = (2 * Math.PI) / bufferLength;
@@ -321,7 +324,7 @@ export default function LLMFront() {
     const canvas = canvasRef.current;
     const canvasContext = canvas.getContext('2d');
   
-    const radius = canvas.height / 3;
+    const radius = canvas.height / 2.5;
     const centerX = canvas.width / 2;
     const centerY = canvas.height / 2;
     const barWidth = (2 * Math.PI) / 128;
@@ -377,17 +380,23 @@ export default function LLMFront() {
   return (
   <Container className="text-center my-5">
     <Row>
-      <Col md={6}>
-        <Card style={{ width: '100%', margin: 'auto', height: '100%' }}>
-          <Card.Body>
+    <Col md={6}>
+      <Card style={{ width: '100%', margin: 'auto', height: '100%' }}>
+        <Card.Body style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '100%' }}>
+          <div>
             <Card.Title>LLM Response</Card.Title>
-            <canvas ref={canvasRef} style={{ width: '420px', height: '200px' }} />
-            <Card.Text style={{ whiteSpace: 'pre-wrap', minHeight: '200px' }}>
-              {displayedText || 'Awaiting response...'}
-            </Card.Text>
-          </Card.Body>
-        </Card>
-      </Col>
+          </div>
+          <div style={{ flexGrow: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', marginTop: '105px' }}>
+            <canvas ref={canvasRef} style={{ width: '420px', height: '200px', maxWidth: '100%', maxHeight: '100%' }} />
+          </div>
+          <Card.Text style={{ whiteSpace: 'pre-wrap', minHeight: '145px' }}>
+            {displayedText || 'Awaiting response...'}
+          </Card.Text>
+        </Card.Body>
+      </Card>
+    </Col>
+
+
 
       <Col md={6}>
         <Card style={{ width: '100%', maxWidth: '640px', margin: 'auto' }}>
