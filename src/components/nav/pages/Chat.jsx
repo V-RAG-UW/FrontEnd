@@ -9,7 +9,7 @@ export default function LLMFront() {
   const videoStreamRef = useRef(null);
   const videoPreviewRef = useRef(null);
   
-  const llmAPIurl = 'http://localhost:5000';
+  const llmAPIurl = 'https://518e-143-235-40-244.ngrok-free.app';
 
   // LLM Text Response stuff
   const [responseText, setResponseText] = useState('');
@@ -76,7 +76,7 @@ export default function LLMFront() {
     mediaRecorderRef.current.onstop = () => {
       // Create a blob from the recorded chunks
       const blob = new Blob(recordedChunks.current, {
-        type: 'video/mp4; codecs=avc1.42E01E, mp4a.40.2',
+        type: 'video/webm',
       });
   
       if (isDebugMode) {
@@ -86,12 +86,12 @@ export default function LLMFront() {
         // Create a link to download the video
         const link = document.createElement('a');
         link.href = videoURL;
-        link.download = 'cbt.mp4';
+        link.download = 'cbt.webm';
         link.click();  // Trigger the download
       }
 
       // Send data to LLM
-      // sendRecording(blob);
+      sendRecording(blob);
     };
 
     setIsRecording(false);
@@ -100,10 +100,10 @@ export default function LLMFront() {
 
   const sendRecording = async (blob) => {
     const formData = new FormData();
-    formData.append('video', blob, 'sussybaka.mp4');
+    formData.append('video', blob, 'sussybaka.webm');
 
     try {
-      const response = await fetch(`${llmAPIurl}/upload`, {
+      const response = await fetch(`${llmAPIurl}/process_video`, {
         method: 'POST',
         body: formData,
       })
@@ -111,12 +111,41 @@ export default function LLMFront() {
       if (response.ok) {
         // Handle response stream from LLM
         handleResponseStream(response.body);
+        // tempHandleResponseStream(response.body);
       } else {
         console.error(`Failed to upload recording: ${response.statusText}`);
       }
     } catch (error) {
-      console.error('Failed to upload recording', error);
+      console.error('Other Errors: ', error);
     }
+  };
+
+  // handle response stream from intermediary server
+  const tempHandleResponseStream = async (responseBody) => {
+    const reader = responseBody.getReader();
+    const decoder = new TextDecoder('utf-8');
+
+    let result;
+    let accumulatedText = ''; // To accumulate the full response
+    setResponseText(null); // Clear previous response text
+    while (!(result = await reader.read()).done) {
+      const chunk = decoder.decode(result.value, { stream: true });
+
+      try {
+        const parsedChunk = JSON.parse(chunk);
+        const description = parsedChunk.description;
+        if (description && description.length > 0) {
+          accumulatedText += description; // Append description to the full response
+          console.log('LLM response:', description);
+        }
+      } catch (error) {
+        console.error('Error parsing JSON stream chunk', error);
+      }
+    }
+
+    // Final full response after the stream ends
+    console.log('Full LLM response:', accumulatedText);
+    setResponseText(accumulatedText);
   };
 
   // Handle streaming response
@@ -126,7 +155,6 @@ export default function LLMFront() {
 
     let result;
     let accumulatedText = ''; // To accumulate the full response
-    setDisplayedText(''); // Clear previous displayed text
     setResponseText(null); // Clear previous response text
     while (!(result = await reader.read()).done) {
       const chunk = decoder.decode(result.value, { stream: true });
@@ -222,9 +250,9 @@ export default function LLMFront() {
 
   const typeText = (typingInterval, text) => {
     let index = 0;
-    setDisplayedText(''); // Clear previous displayed text
+    setDisplayedText(text.charAt(index)); // Clear previous displayed text
     const interval = setInterval(() => {
-      setDisplayedText((prev) => prev + text.split('')[index-1]);
+      setDisplayedText((prev) => prev + text.charAt(index));
       index++;
       if (index >= text.length) {
         clearInterval(interval);
