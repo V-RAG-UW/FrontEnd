@@ -439,7 +439,7 @@ export default function LLMFront() {
       <Card style={{ width: '100%', margin: 'auto', height: '100%' }}>
         <Card.Body style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '100%' }}>
           <div>
-            <Card.Title>Virtual Agent</Card.Title>
+            <Card.Title>Grace</Card.Title>
           </div>
           <div style={{ flexGrow: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', marginTop: '105px' }}>
             <canvas ref={canvasRef} style={{ width: '420px', height: '200px', maxWidth: '100%', maxHeight: '100%' }} />

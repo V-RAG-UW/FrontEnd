@@ -33,7 +33,7 @@ const AboutUs = () => {
     {
       name: 'Wen Jie Lee',
       role: 'VideoRAG Database Engineer',
-      description: 'Lorem ipsum',
+      description: 'Wen Jie is responsible for managing and optimizing the VideoRAG database, ensuring efficient storage, retrieval, and analysis of video-related data.',
       image: lee,
       homepage: 'https://www.wenjielee.tech/about',
     },
