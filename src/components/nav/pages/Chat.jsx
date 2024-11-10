@@ -52,7 +52,7 @@ export default function LLMFront() {
     // Start the recording
     MediaRecorder.start();
     setIsRecording(true);
-  }
+  };
 
   const stopRecording = () => {
     // Stop the recording
@@ -67,7 +67,7 @@ export default function LLMFront() {
 
     setIsRecording(false);
     recordedChunks.current = [];
-  }
+  };
 
   const sendRecording = async (blob) => {
     const formData = new FormData();

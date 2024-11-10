@@ -16,7 +16,7 @@ export default function LLMNavbar(props) {
             height="30"
             className="d-inline-block align-top"
           />{" "}
-          RAG Deez Nuts
+          V-RAG
         </Navbar.Brand>
         <Navbar.Collapse id="responsive-navbar-nav" className="me-auto">
           <Nav>

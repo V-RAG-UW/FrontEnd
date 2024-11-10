@@ -10,7 +10,7 @@ const LandingPage = (props) => {
         <Container>
           <h1 className="display-4">Enhancing Retrieval-Augmented Generation (RAG) with Video Data</h1>
           <p className="lead">
-            This project aims to enhance chat agents in childcare and education by incorporating video data, making responses more authentic and contextually accurate.
+            This project aims to enhance chat agents by incorporating video data, making responses more authentic and contextually accurate.
           </p>
           <Button variant="light" size="lg" href="#overview">
             Learn More
@@ -79,7 +79,7 @@ const LandingPage = (props) => {
 
       {/* Footer Section */}
       <footer className="text-center py-3">
-        <p>&copy; 2024 RAG Deez Nuts. All Rights Reserved.</p>
+        <p>&copy; 2024 V-RAG. All Rights Reserved.</p>
       </footer>
     </div>
   );
