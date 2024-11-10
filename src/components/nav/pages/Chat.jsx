@@ -2,12 +2,14 @@ import React, { useRef, useState, useEffect } from 'react';
 import { Button, Card, Container, Col, Row } from 'react-bootstrap';
 
 export default function LLMFront() {
-  const isDebugMode = false; // Set to true if running in dev mode
+  const isDebugMode = true; // Set to true if running in dev mode
   const [isRecording, setIsRecording] = useState(false);
   const mediaRecorderRef = useRef(null);
   const recordedChunks = useRef([]);
   const videoStreamRef = useRef(null);
   const videoPreviewRef = useRef(null);
+  
+  const llmAPIurl = 'http://localhost:5000';
 
   // LLM Text Response stuff
   const [responseText, setResponseText] = useState('');
@@ -17,11 +19,12 @@ export default function LLMFront() {
   const elevenLabsAPIKey = "sk_0498c804c30683cedaf5fd1f6c1e63de649af08e5b2ee6dc";
   const elevenLabsVoiceID = "cgSgspJ2msm6clMCkdW9";
   const elevenLabsURL = `https://api.elevenlabs.io/v1/text-to-speech/${elevenLabsVoiceID}/stream`;
+
+  // Audio Visualization stuff
   const audioContextRef = useRef(null);
   const analyserRef = useRef(null);
   const canvasRef = useRef(null);
   
-  const llmAPIurl = 'http://localhost:5000';
     
   useEffect(() => {
     const startWebcam = async () => {
@@ -160,6 +163,7 @@ export default function LLMFront() {
   };
 
   useEffect(() => {
+    drawInitialCanvas();
     if (responseText) {
       console.log('Received response:', responseText);
       ElevenLabsTTS(responseText);
@@ -200,6 +204,7 @@ export default function LLMFront() {
         // Typing effect by taking duration of the audio file divided by the number of characters
         const typingInterval = audio.duration / text.length;
         typeText(typingInterval, text);
+        visualizeAudio(audio);
       });
 
       if (isDebugMode) {
@@ -225,6 +230,89 @@ export default function LLMFront() {
         clearInterval(interval);
       }
     }, typingInterval * 500); // Typing interval is based on speech duration
+  };
+
+  const visualizeAudio = (audio) => {
+    if (!audioContextRef.current) {
+      audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
+    }
+  
+    const audioContext = audioContextRef.current;
+    const source = audioContext.createMediaElementSource(audio);
+    const analyser = audioContext.createAnalyser();
+    analyser.fftSize = 256;
+  
+    source.connect(analyser);
+    analyser.connect(audioContext.destination);
+  
+    analyserRef.current = analyser;
+  
+    const canvas = canvasRef.current;
+    const canvasContext = canvas.getContext('2d');
+    const bufferLength = analyser.frequencyBinCount;
+    const dataArray = new Uint8Array(bufferLength);
+  
+    const drawCircularVisualization = () => {
+      analyser.getByteFrequencyData(dataArray);
+      canvasContext.clearRect(0, 0, canvas.width, canvas.height);
+  
+      const radius = canvas.height / 3;
+      const centerX = canvas.width / 2;
+      const centerY = canvas.height / 2;
+      const barWidth = (2 * Math.PI) / bufferLength;
+      const maxBarHeight = radius - 10;
+      
+      for (let i = 0; i < bufferLength; i++) {
+        const frequency = (i / bufferLength) * audioContext.sampleRate;
+        if (frequency > 85 || frequency < 255) {
+          const barHeight = dataArray[i] / 2; // Scale the bar height
+          const angle = i * barWidth;
+    
+          const x1 = centerX + Math.cos(angle) * radius;
+          const y1 = centerY + Math.sin(angle) * radius;
+          const x2 = centerX + Math.cos(angle) * (radius + 1 + (barHeight * maxBarHeight / 255));
+          const y2 = centerY + Math.sin(angle) * (radius + 1 + (barHeight * maxBarHeight / 255));
+    
+          // Draw circular bar
+          canvasContext.beginPath();
+          canvasContext.moveTo(x1, y1);
+          canvasContext.lineTo(x2, y2);
+          canvasContext.strokeStyle = `hsl(${i * 360 / bufferLength}, 100%, 50%)`;
+          canvasContext.lineWidth = 2;
+          canvasContext.stroke();
+        }
+      }
+  
+      requestAnimationFrame(drawCircularVisualization);
+    };
+  
+    drawCircularVisualization();
+  };
+
+  const drawInitialCanvas = () => {
+    const canvas = canvasRef.current;
+    const canvasContext = canvas.getContext('2d');
+  
+    const radius = canvas.height / 3;
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+    const barWidth = (2 * Math.PI) / 128;
+  
+    for (let i = 0; i < 256; i++) {
+      const angle = i * barWidth;
+    
+      const x1 = centerX + Math.cos(angle) * radius;
+      const y1 = centerY + Math.sin(angle) * radius;
+      const x2 = centerX + Math.cos(angle) * (radius + 1);
+      const y2 = centerY + Math.sin(angle) * (radius + 1);
+
+      canvasContext.beginPath();
+      canvasContext.moveTo(x1, y1);
+      canvasContext.lineTo(x2, y2);
+      canvasContext.strokeStyle = `hsl(${i * 360 / 128}, 100%, 50%)`;
+      canvasContext.lineWidth = 2;
+      canvasContext.stroke();
+    }
   };
 
   // Function to simulate receiving a stream of data from the LLM
@@ -258,7 +346,6 @@ export default function LLMFront() {
     handleResponseStream(simulatedStream);
   };
 
-
   return (
   <Container className="text-center my-5">
     <Row>
@@ -266,6 +353,7 @@ export default function LLMFront() {
         <Card style={{ width: '100%', margin: 'auto', height: '100%' }}>
           <Card.Body>
             <Card.Title>LLM Response</Card.Title>
+            <canvas ref={canvasRef} style={{ width: '420px', height: '200px' }} />
             <Card.Text style={{ whiteSpace: 'pre-wrap', minHeight: '200px' }}>
               {displayedText || 'Awaiting response...'}
             </Card.Text>
